@@ -24,6 +24,9 @@ const Darker = new Lang.Class({
     actor.add_effect(this._effect);
     this.actor = actor;
   },
+  cleanup: function(actor) {
+    actor.remove_effect(this._effect);
+  }
 })
 
 function slide() {
@@ -39,7 +42,7 @@ const Dimmer = new Lang.Class({
           global.log(error.message);
           return;
         }
-        this._proxy.connect('g-properties-changed', Lang.bind(this, this._sync));
+        this._connectId = this._proxy.connect('g-properties-changed', Lang.bind(this, this._sync));
         this._sync();
       })
     );
@@ -47,6 +50,11 @@ const Dimmer = new Lang.Class({
   _sync: function() {
     let level = this._proxy.Brightness / 100.0 - 1.0;
     darker._effect.set_brightness(level);
+  },
+  cleanup: function() {
+    if (this._connectId > -1) {
+      this._proxy.disconnect(this._connectId);
+    }
   }
 });
 
@@ -61,9 +69,8 @@ function enable() {
 
 function disable() {
   let actor = Main.uiGroup;
-  if(darker) {
-    actor.remove_effect(darker._effect);
-    delete darker;
-  }
+  darker.cleanup(actor);
+  delete darker;
+  dimmer.cleanup();
   delete dimmer;
 }
