@@ -1,8 +1,10 @@
 /* global global imports */
 const Lang = imports.lang;
 const Main = imports.ui.main;
+const Meta = imports.gi.Meta;
 const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
+const Shell = imports.gi.Shell;
 
 const BUS_NAME = 'org.gnome.SettingsDaemon.Power';
 const OBJECT_PATH = '/org/gnome/SettingsDaemon/Power';
@@ -15,7 +17,7 @@ const BrightnessInterface = '<node> \
 
 const BrightnessProxy = Gio.DBusProxy.makeProxyWrapper(BrightnessInterface);
 
-let text, dimmer, onWindowCreated, slider, darker;
+let text, dimmer, onWindowCreated, slider, darker, mouseSprite, mouseDarker;
 
 const Darker = new Lang.Class({
   Name: 'Darker',
@@ -46,14 +48,28 @@ const Dimmer = new Lang.Class({
         this._sync();
       })
     );
+    mouseSprite = new Clutter.Texture();
+    let cursorTracker = Meta.CursorTracker.get_for_screen(global.screen);
+    Shell.util_cursor_tracker_to_clutter(cursorTracker, mouseSprite);
+    this._cursorTrackerId = cursorTracker.connect('cursor-changed', Lang.bind(this, this._updateMouseSprite));
+    this._cursorTracker = cursorTracker;
+  },
+  _updateMouseSprite: function() {
+    Shell.util_cursor_tracker_to_clutter(this._cursorTracker, mouseSprite);
+    let [xHot, yHot] = this._cursorTracker.get_hot();
+    mouseSprite.set_anchor_point(xHot, yHot);
   },
   _sync: function() {
     let level = this._proxy.Brightness / 100.0 - 1.0;
     darker._effect.set_brightness(level);
+    mouseDarker._effect.set_brightness(level);
   },
   cleanup: function() {
     if (this._connectId > -1) {
       this._proxy.disconnect(this._connectId);
+    }
+    if (this._cursorTrackerId > -1) {
+      this._cursorTracker.disconnect(this._cursorTrackerId);
     }
   }
 });
@@ -65,12 +81,15 @@ function enable() {
   dimmer = new Dimmer();
   let actor = Main.uiGroup;
   darker = new Darker(actor);
+  mouseDarker = new Darker(mouseSprite);
 }
 
 function disable() {
   let actor = Main.uiGroup;
   darker.cleanup(actor);
   delete darker;
+  mouseDarker.cleanup(mouseSprite);
+  delete mouseDarker;
   dimmer.cleanup();
   delete dimmer;
 }
