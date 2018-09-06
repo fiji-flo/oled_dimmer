@@ -7,6 +7,14 @@ const Gio = imports.gi.Gio;
 const BUS_NAME = 'org.gnome.SettingsDaemon.Power';
 const OBJECT_PATH = '/org/gnome/SettingsDaemon/Power';
 
+// Minimum brightness to allow.
+// - Set to 0 to enable "turning off" the screen.
+// - Values above 0.0 prevent the screen from going entirely black.
+// Defaults to 0.2 since the main complaint at
+// https://extensions.gnome.org/extension/1222/oled-dimmer/
+// are from users whose screens have turned entirely black.
+const MIN_BRIGHTNESS = 0.2;
+
 const BrightnessInterface = '<node> \
 <interface name="org.gnome.SettingsDaemon.Power.Screen"> \
 <property name="Brightness" type="i" access="readwrite"/> \
@@ -48,7 +56,7 @@ const Dimmer = new Lang.Class({
     );
   },
   _sync: function() {
-    let level = this._proxy.Brightness / 100.0 - 1.0;
+    let level = Math.max(this._proxy.Brightness / 100.0 - 1.0, MIN_BRIGHTNESS);
     darker._effect.set_brightness(level);
   },
   cleanup: function() {
