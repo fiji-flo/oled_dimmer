@@ -3,5 +3,5 @@
   "description": "Dim OLED (or any) displays for GNOME.",
   "uuid": "oled_dimmer@flomerz.gmail.com",
   "url": "https://github.com/fiji-flo/oled_dimmer",
-  "shell-version": ["3.24"]
+  "shell-version": ["3.24", "40", "41"]
 }
